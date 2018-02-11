@@ -16,25 +16,24 @@ to install those first.
 The most common workflow is supported with `clone`, `rebase` and `submit` (`shelve`) commands:
 
 ```
-NAME:
-   gp - Git/p4 helper
+Git/p4 helper
 
-USAGE:
-   gp [global options] command [command options] [arguments...]
+Usage:
+  gp [command]
 
-VERSION:
-   0.0.1
+Available Commands:
+  clone       Create a new Git directory from an existing p4 repository
+  help        Help about any command
+  rebase      Update the Git repository with recent changes from p4
+  shelve      Shelve changes back to the p4 repository
+  submit      Submit changes back to the p4 repository
 
-COMMANDS:
-     clone    Creates a new Git directory from an existing p4 repository
-     rebase   Updates the Git repository with recent changes from p4
-     submit   Submits changes back to the p4 repository
-     shelve   Shelves changes back to the p4 repository
-     help, h  Shows a list of commands or help for one command
+Flags:
+  -c, --clear-credentials   clear saved credentials
+  -h, --help                help for gp
+      --version             version for gp
 
-GLOBAL OPTIONS:
-   --help, -h     show help
-   --version, -v  print the version
+Use "gp [command] --help" for more information about a command.
 ```
 
 Please refer to [Git-p4](https://git-scm.com/docs/git-p4) documentation for the details.
@@ -45,7 +44,10 @@ The sample workflow:
     $ cd local_copy
     $ ... do the changes ...
     $ git commit -am"message"
+    $ gp rebase
     $ gp shelve
+
+### gp clone
 
 `gp clone` creates a new Git directory from an existing p4 repository specified by the depot and the project (or the stream) paths:
 
@@ -60,3 +62,19 @@ The environment and credentials are saved in the global Git config, please
 use `--reset-credentials` to clear the config values:
 
     gp clone //depot/project --reset-credentials
+
+### gp rebase
+
+A common working pattern is to fetch the latest changes from the p4 depot and merge them with local uncommitted changes. Often, the p4 repository is the ultimate location for all code, thus a rebase workflow makes sense. `gp rebase` does `git p4 sync` followed by `git rebase` to move local commits on top of updated p4 changes.
+
+### gp submit
+
+To submit all changes that are in the current Git branch but not in the p4/master branch, use:
+
+    $ git p4 submit
+
+### gp shelve
+
+To shelve all changes that are in the current Git branch, use:
+
+    $ git p4 shelve
