@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"crypto/aes"
@@ -9,14 +9,32 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
 
-	"github.com/urfave/cli"
+	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 )
+
+var clearCredentials bool
+
+var rootCmd = &cobra.Command{
+	Use:     "gp",
+	Short:   "Git/p4 helper",
+	Version: "0.0.1",
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().BoolVarP(&clearCredentials, "clear-credentials", "c", false, "clear saved credentials")
+}
 
 func encrypt(plaintext string, fullKey string) (string, error) {
 	key := []byte(fullKey)[:32]
@@ -155,8 +173,8 @@ func readConfig(key string, title string, isSecured bool) (string, error) {
 	return out, nil
 }
 
-func login(c *cli.Context) error {
-	if c.Bool("reset-credentials") {
+func login() error {
+	if clearCredentials {
 		err := exec.Command("git", "config", "--global",
 			"--remove-section", "gp").Run()
 		if err != nil {
@@ -194,106 +212,4 @@ func login(c *cli.Context) error {
 	cmd := newCmd("p4", "login")
 	cmd.Stdin = strings.NewReader(string(password))
 	return cmd.Run()
-}
-
-func clone(c *cli.Context) error {
-	err := login(c)
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-
-	args := append([]string{"p4", "clone"}, c.Args()...)
-	cmd := newCmd("git", args...)
-	return cmd.Run()
-}
-
-func rebase(c *cli.Context) error {
-	err := login(c)
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-
-	cmd := newCmd("git", "p4", "rebase")
-	return cmd.Run()
-}
-
-func submit(c *cli.Context) error {
-	err := login(c)
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-
-	cmd := newCmd("git", "p4", "submit")
-	return cmd.Run()
-}
-
-func shelve(c *cli.Context) error {
-	err := login(c)
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-
-	cmd := newCmd("git", "p4", "submit", "--shelve")
-	return cmd.Run()
-}
-
-func main() {
-	app := cli.NewApp()
-	app.Name = "gp"
-	app.Version = "0.0.1"
-	app.Usage = "Git/p4 helper"
-
-	resetFlag := cli.BoolFlag{
-		Name:  "reset-credentials",
-		Usage: "reset saved credentials",
-	}
-
-	app.Commands = []cli.Command{
-		{
-			Name:      "clone",
-			Usage:     "Creates a new Git directory from an existing p4 repository",
-			UsageText: "gp clone <repository> [<directory>]",
-			Description: `
-	Creates a new Git directory from an existing p4 repository specified
-	by the depot and the project (or the stream) paths:
-
-		gp clone //depot/project
-		gp clone //depot/stream destination
-
-	To reproduce the entire p4 history in Git, please use the @all modifier
-	on the depot path:
-
-		gp clone //depot/project@all
-`,
-			Action: clone,
-			Flags:  []cli.Flag{resetFlag},
-		},
-		{
-			Name:      "rebase",
-			Usage:     "Updates the Git repository with recent changes from p4",
-			UsageText: "gp rebase",
-			Action:    rebase,
-			Flags:     []cli.Flag{resetFlag},
-		},
-		{
-			Name:      "submit",
-			Usage:     "Submits changes back to the p4 repository",
-			UsageText: "gp submit",
-			Action:    submit,
-			Flags:     []cli.Flag{resetFlag},
-		},
-		{
-			Name:      "shelve",
-			Usage:     "Shelves changes back to the p4 repository",
-			UsageText: "gp shelve",
-			Action:    shelve,
-			Flags:     []cli.Flag{resetFlag},
-		},
-	}
-
-	app.Run(os.Args)
 }
