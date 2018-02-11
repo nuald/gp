@@ -26,6 +26,13 @@ task lint(type: Exec, dependsOn: setupLinters) {
 	commandLine 'gometalinter', './...'
 }
 
+task unitTest(type: Exec) {
+	group VERIFICATION_GROUP
+	description 'Unit-testing the source code.'
+
+	commandLine 'go', 'test', '-cover', './...'
+}
+
 task gofmt(type: Exec) {
 	group BUILD_GROUP
 	description 'Reformats the code.'
@@ -33,4 +40,4 @@ task gofmt(type: Exec) {
 	commandLine 'gofmt', '-s', '-w', '.'
 }
 
-task tests(dependsOn: [gofmt, lint])
+task tests(dependsOn: [gofmt, lint, unitTest])

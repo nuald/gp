@@ -39,6 +39,10 @@ func init() {
 }
 
 func encrypt(plaintext string, fullKey string) (string, error) {
+	if len(fullKey) < 32 {
+		return "", errors.Errorf("key is too short")
+	}
+
 	key := []byte(fullKey)[:32]
 	c, err := aes.NewCipher(key)
 	if err != nil {
@@ -60,6 +64,10 @@ func encrypt(plaintext string, fullKey string) (string, error) {
 }
 
 func decrypt(encoded string, fullKey string) ([]byte, error) {
+	if len(fullKey) < 32 {
+		return nil, errors.Errorf("key is too short")
+	}
+
 	key := []byte(fullKey)[:32]
 	ciphertext, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
