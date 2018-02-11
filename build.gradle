@@ -26,4 +26,11 @@ task lint(type: Exec, dependsOn: setupLinters) {
 	commandLine 'gometalinter', './...'
 }
 
-task tests(dependsOn: lint)
+task gofmt(type: Exec) {
+	group BUILD_GROUP
+	description 'Reformats the code.'
+
+	commandLine 'gofmt', '-s', '-w', '.'
+}
+
+task tests(dependsOn: [gofmt, lint])

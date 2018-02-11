@@ -13,9 +13,9 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/go-errors/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
-	"github.com/go-errors/errors"
 )
 
 var clearCredentials bool
@@ -34,7 +34,8 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVarP(&clearCredentials, "clear-credentials", "c", false, "clear saved credentials")
+	rootCmd.PersistentFlags().BoolVarP(&clearCredentials, "clear-credentials",
+		"c", false, "clear saved credentials")
 }
 
 func encrypt(plaintext string, fullKey string) (string, error) {
@@ -111,7 +112,7 @@ func readSecret() (string, error) {
 		dst := make([]byte, hex.EncodedLen(len(b)))
 		hex.Encode(dst, b)
 		key = string(dst)
-		args := []string {"config", "--global", "--add", "gp.key", key}
+		args := []string{"config", "--global", "--add", "gp.key", key}
 
 		/* #nosec */
 		if err := exec.Command("git", args...).Run(); err != nil {
