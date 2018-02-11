@@ -1,0 +1,29 @@
+def BUILD_GROUP = 'Build'
+def VERIFICATION_GROUP = 'Verification'
+
+task setupCore(type: Exec) {
+	group BUILD_GROUP
+	description 'Installs the core packages.'
+
+	commandLine 'go', 'get', '-u',
+		'github.com/alecthomas/gometalinter',
+		'github.com/spf13/cobra',
+		'golang.org/x/crypto/ssh/terminal',
+		'github.com/go-errors/errors'
+}
+
+task setupLinters(type: Exec, dependsOn:setupCore) {
+	group BUILD_GROUP
+	description 'Installs the linters.'
+
+	commandLine 'gometalinter', '--install'
+}
+
+task lint(type: Exec, dependsOn: setupLinters) {
+	group VERIFICATION_GROUP
+	description 'Lints the source code.'
+
+	commandLine 'gometalinter', './...'
+}
+
+task tests(dependsOn: lint)

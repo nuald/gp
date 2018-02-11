@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/spf13/cobra"
+	"github.com/go-errors/errors"
 )
 
 func init() {
@@ -24,15 +23,17 @@ on the depot path:
 
     gp clone //depot/project@all
 `,
-	Run: func(cmd *cobra.Command, args []string) {
-		err := login()
-		if err != nil {
-			log.Fatal(err)
-			return
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := login(); err != nil {
+			return err
 		}
 
 		cmdArgs := append([]string{"p4", "clone"}, args...)
 		gitCmd := newCmd("git", cmdArgs...)
-		gitCmd.Run()
+		if err := gitCmd.Run(); err != nil {
+			return errors.Wrap(err, 1)
+		}
+
+		return nil
 	},
 }

@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/spf13/cobra"
+	"github.com/go-errors/errors"
 )
 
 func init() {
@@ -13,14 +12,16 @@ func init() {
 var shelveCmd = &cobra.Command{
 	Use:   "shelve",
 	Short: "Shelve changes back to the p4 repository",
-	Run: func(cmd *cobra.Command, args []string) {
-		err := login()
-		if err != nil {
-			log.Fatal(err)
-			return
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := login(); err != nil {
+			return err
 		}
 
 		gitCmd := newCmd("git", "p4", "submit", "--shelve")
-		gitCmd.Run()
+		if err := gitCmd.Run(); err != nil {
+			return errors.Wrap(err, 1)
+		}
+
+		return nil
 	},
 }

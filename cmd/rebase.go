@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/spf13/cobra"
+	"github.com/go-errors/errors"
 )
 
 func init() {
@@ -13,14 +12,16 @@ func init() {
 var rebaseCmd = &cobra.Command{
 	Use:   "rebase",
 	Short: "Update the Git repository with recent changes from p4",
-	Run: func(cmd *cobra.Command, args []string) {
-		err := login()
-		if err != nil {
-			log.Fatal(err)
-			return
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := login(); err != nil {
+			return err
 		}
 
 		gitCmd := newCmd("git", "p4", "rebase")
-		gitCmd.Run()
+		if err := gitCmd.Run(); err != nil {
+			return errors.Wrap(err, 1)
+		}
+
+		return nil
 	},
 }

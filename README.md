@@ -78,3 +78,9 @@ To submit all changes that are in the current Git branch but not in the p4/maste
 To shelve all changes that are in the current Git branch, use:
 
     $ git p4 shelve
+
+## Contribution
+
+Please use Gradle build script for the testing the package before submitting the code:
+
+    $ gradle tests
