@@ -12,7 +12,7 @@ task setupCore(type: Exec) {
 		'github.com/go-errors/errors'
 }
 
-task setupLinters(type: Exec, dependsOn:setupCore) {
+task setupLinters(type: Exec, dependsOn: setupCore) {
 	group BUILD_GROUP
 	description 'Installs the linters.'
 
@@ -41,3 +41,10 @@ task gofmt(type: Exec) {
 }
 
 task tests(dependsOn: [gofmt, lint, unitTest])
+
+task install(type: Exec, dependsOn: tests) {
+	group BUILD_GROUP
+	description 'Installs the application.'
+
+	commandLine 'go', 'install'
+}

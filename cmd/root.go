@@ -26,7 +26,7 @@ var clearCredentials bool
 var rootCmd = &cobra.Command{
 	Use:     "gp",
 	Short:   "Git/p4 helper",
-	Version: "0.0.1",
+	Version: "0.0.2",
 }
 
 // Execute other subcommands
