@@ -335,38 +335,38 @@ func getAllWorkspaces(username string) ([]string, error) {
 	return workspaces, nil
 }
 
-func createWorkspace() error {
+func createWorkspace() (string, error) {
 	username, err := getUsername()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	depotPath, err := getDepotPath()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	workspace := username + strings.Replace(
 		depotPath[1:len(depotPath)-1], "/", "_", -1)
 	if err = os.Setenv("P4CLIENT", workspace); err != nil {
-		return errors.Wrap(err, 1)
+		return "", errors.Wrap(err, 1)
 	}
 
 	workspaces, err := getAllWorkspaces(username)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for _, ws := range workspaces {
 		if ws == workspace {
 			// Got created workspace
-			return nil
+			return workspace, nil
 		}
 	}
 
 	usr, err := user.Current()
 	if err != nil {
-		return errors.Wrap(err, 1)
+		return "", errors.Wrap(err, 1)
 	}
 
 	root := path.Join(usr.HomeDir, ".gp", workspace)
@@ -384,27 +384,28 @@ View:
 	cmd := newCmd("p4", "client", "-i")
 	cmd.Stdin = strings.NewReader(def)
 	if err := cmd.Run(); err != nil {
-		return errors.Wrap(err, 1)
+		return "", errors.Wrap(err, 1)
 	}
 
-	return nil
+	return workspace, nil
 }
 
-func prepareSubmit() error {
+func prepareSubmit() (string, error) {
 	if err := login(); err != nil {
-		return err
+		return "", err
 	}
 
-	if err := createWorkspace(); err != nil {
-		return err
+	workspace, err := createWorkspace()
+	if err != nil {
+		return "", err
 	}
 
 	args := []string{"config", "--replace-all",
 		"git-p4.skipSubmitEdit", "true"}
 	/* #nosec */
 	if err := exec.Command("git", args...).Run(); err != nil {
-		return errors.Wrap(err, 1)
+		return "", errors.Wrap(err, 1)
 	}
 
-	return nil
+	return workspace, nil
 }

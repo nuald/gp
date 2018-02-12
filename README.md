@@ -85,3 +85,7 @@ To shelve all changes that are in the current Git branch, use:
 Please use Gradle build script for the testing the package before submitting the code:
 
     $ gradle tests
+
+To install the application locally please use the `install` task:
+
+    $ gradle install
