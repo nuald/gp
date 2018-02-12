@@ -1,6 +1,6 @@
 # Git/p4 helper
 
-A CLI tool to help with Git/p4 interaction.
+A CLI tool to help with Git, p4 and Swarm integration.
 
 ## Requirements
 
@@ -25,6 +25,7 @@ Available Commands:
   clone       Create a new Git directory from an existing p4 repository
   help        Help about any command
   rebase      Update the Git repository with recent changes from p4
+  review      Add #review hashtag and the list of reviewers into the HEAD commit
   shelve      Shelve changes back to the p4 repository
   submit      Submit changes back to the p4 repository
 

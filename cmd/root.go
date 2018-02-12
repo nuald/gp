@@ -26,7 +26,7 @@ var clearCredentials bool
 var rootCmd = &cobra.Command{
 	Use:     "gp",
 	Short:   "Git/p4 helper",
-	Version: "0.0.2",
+	Version: "0.0.5",
 }
 
 // Execute other subcommands
@@ -180,12 +180,19 @@ func readInput(isSecured bool) (string, error) {
 	return result, nil
 }
 
-func readConfig(key string, title string, isSecured bool) (string, error) {
+func readConfig(key string, title string,
+	isGlobal bool, isSecured bool) (string, error) {
 	gitKey := "gp." + key
 	var out string
 
+	args := []string{"config"}
+	if isGlobal {
+		args = append(args, "--global")
+	}
+	getArgs := append(args, gitKey)
+
 	/* #nosec */
-	cmdOut, err := exec.Command("git", "config", "--global", gitKey).Output()
+	cmdOut, err := exec.Command("git", getArgs...).Output()
 	if err != nil {
 		fmt.Printf("Enter %s: ", title)
 
@@ -194,10 +201,10 @@ func readConfig(key string, title string, isSecured bool) (string, error) {
 			return out, err
 		}
 
-		args := []string{"config", "--global", "--replace-all", gitKey, out}
+		addArgs := append(args, "--replace-all", gitKey, out)
 
 		/* #nosec */
-		if err := exec.Command("git", args...).Run(); err != nil {
+		if err := exec.Command("git", addArgs...).Run(); err != nil {
 			return out, errors.Wrap(err, 1)
 		}
 	} else {
@@ -207,7 +214,7 @@ func readConfig(key string, title string, isSecured bool) (string, error) {
 }
 
 func setHostEnvVar() error {
-	host, err := trim(readConfig("P4PORT", "Server Host", false))
+	host, err := trim(readConfig("P4PORT", "Server Host", true, false))
 	if err != nil {
 		return err
 	}
@@ -220,7 +227,7 @@ func setHostEnvVar() error {
 }
 
 func getUsername() (string, error) {
-	return trim(readConfig("P4USER", "Username", false))
+	return trim(readConfig("P4USER", "Username", true, false))
 }
 
 func setUsernameEnvVar() error {
@@ -259,7 +266,7 @@ func login() error {
 		return err
 	}
 
-	out, err := trim(readConfig("P4PASSWD", "Password", true))
+	out, err := trim(readConfig("P4PASSWD", "Password", true, true))
 	if err != nil {
 		return err
 	}
