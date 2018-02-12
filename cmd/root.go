@@ -11,6 +11,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
+	"path"
+	"regexp"
 	"strings"
 
 	"github.com/go-errors/errors"
@@ -120,7 +123,7 @@ func readSecret() (string, error) {
 		dst := make([]byte, hex.EncodedLen(len(b)))
 		hex.Encode(dst, b)
 		key = string(dst)
-		args := []string{"config", "--global", "--add", "gp.key", key}
+		args := []string{"config", "--global", "--replace-all", "gp.key", key}
 
 		/* #nosec */
 		if err := exec.Command("git", args...).Run(); err != nil {
@@ -148,7 +151,7 @@ func readSecured(n *terminal.Terminal) (string, error) {
 
 func trim(s string, err error) (string, error) {
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return strings.TrimSpace(s), nil
 }
@@ -191,7 +194,7 @@ func readConfig(key string, title string, isSecured bool) (string, error) {
 			return out, err
 		}
 
-		args := []string{"config", "--global", "--add", gitKey, out}
+		args := []string{"config", "--global", "--replace-all", gitKey, out}
 
 		/* #nosec */
 		if err := exec.Command("git", args...).Run(); err != nil {
@@ -216,8 +219,12 @@ func setHostEnvVar() error {
 	return nil
 }
 
+func getUsername() (string, error) {
+	return trim(readConfig("P4USER", "Username", false))
+}
+
 func setUsernameEnvVar() error {
-	user, err := trim(readConfig("P4USER", "Username", false))
+	user, err := getUsername()
 	if err != nil {
 		return err
 	}
@@ -267,5 +274,130 @@ func login() error {
 	if err := cmd.Run(); err != nil {
 		return errors.Wrap(err, 1)
 	}
+	return nil
+}
+
+func getDepotPath() (string, error) {
+	/* #nosec */
+	msg, err := exec.Command("git", "log", "p4/HEAD", "-n1").Output()
+	if err != nil {
+		return "", errors.Wrap(err, 1)
+	}
+
+	gitP4Re := regexp.MustCompile(` *\[git-p4: (.*)\]`)
+	m := gitP4Re.FindStringSubmatch(string(msg))
+	if m == nil {
+		return "", errors.Errorf("couldn't find git-p4 logs")
+	}
+
+	var depotPath string
+	for _, kv := range strings.Split(m[1], ":") {
+		param := strings.Split(kv, "=")
+		if strings.TrimSpace(param[0]) == "depot-paths" {
+			depotPath = strings.Trim(param[1], ` "`)
+		}
+	}
+	if depotPath == "" {
+		return "", errors.Errorf("couldn't find depot path")
+	}
+
+	return depotPath, nil
+}
+
+func getAllWorkspaces(username string) ([]string, error) {
+	var workspaces []string
+
+	/* #nosec */
+	ztag, err := exec.Command("p4", "-ztag", "clients", "-u", username).Output()
+	if err != nil {
+		return nil, errors.Wrap(err, 1)
+	}
+
+	ztagClientRe := regexp.MustCompile(`(?m:^\.\.\.\s+(\w+)\s+(.*)$)`)
+	mm := ztagClientRe.FindAllStringSubmatch(string(ztag), -1)
+	if mm == nil {
+		return nil, errors.Errorf("couldn't find p4 clients")
+	}
+
+	for _, matches := range mm {
+		key := matches[1]
+		if key == "client" {
+			workspaces = append(workspaces, matches[2])
+		}
+	}
+	return workspaces, nil
+}
+
+func createWorkspace() error {
+	username, err := getUsername()
+	if err != nil {
+		return err
+	}
+
+	depotPath, err := getDepotPath()
+	if err != nil {
+		return err
+	}
+
+	workspace := username + strings.Replace(
+		depotPath[1:len(depotPath)-1], "/", "_", -1)
+	if err = os.Setenv("P4CLIENT", workspace); err != nil {
+		return errors.Wrap(err, 1)
+	}
+
+	workspaces, err := getAllWorkspaces(username)
+	if err != nil {
+		return err
+	}
+
+	for _, ws := range workspaces {
+		if ws == workspace {
+			// Got created workspace
+			return nil
+		}
+	}
+
+	usr, err := user.Current()
+	if err != nil {
+		return errors.Wrap(err, 1)
+	}
+
+	root := path.Join(usr.HomeDir, ".gp", workspace)
+	mapping := fmt.Sprintf("\t%s... //%s/%s...",
+		depotPath, workspace, depotPath[2:])
+	def := fmt.Sprintf(`
+Client: %s
+Owner: %s
+Root: %s
+Options: allwrite noclobber compress unlocked nomodtime rmdir
+View:
+%s
+`, workspace, username, root, mapping)
+
+	cmd := newCmd("p4", "client", "-i")
+	cmd.Stdin = strings.NewReader(def)
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, 1)
+	}
+
+	return nil
+}
+
+func prepareSubmit() error {
+	if err := login(); err != nil {
+		return err
+	}
+
+	if err := createWorkspace(); err != nil {
+		return err
+	}
+
+	args := []string{"config", "--replace-all",
+		"git-p4.skipSubmitEdit", "true"}
+	/* #nosec */
+	if err := exec.Command("git", args...).Run(); err != nil {
+		return errors.Wrap(err, 1)
+	}
+
 	return nil
 }

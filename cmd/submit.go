@@ -13,7 +13,7 @@ var submitCmd = &cobra.Command{
 	Use:   "submit",
 	Short: "Submit changes back to the p4 repository",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := login(); err != nil {
+		if err := prepareSubmit(); err != nil {
 			return err
 		}
 
