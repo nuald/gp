@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -28,7 +27,8 @@ var shelveCmd = &cobra.Command{
 		}
 
 		if addReview {
-			if err = addReviewHashtag(); err != nil {
+			// Add initial #review if needed
+			if err = updateReviewHashtag(); err != nil {
 				return err
 			}
 		}
@@ -49,10 +49,19 @@ var shelveCmd = &cobra.Command{
 		}
 
 		for index, sha := range commits {
-			note := fmt.Sprintf(`-mp4:%s`, cl[index])
-			gitCmd = newCmd("git", "notes", "add", "-f", note, sha)
-			if err = gitCmd.Run(); err != nil {
-				return errors.Wrap(err, 1)
+			if err = addNote(cl[index], sha); err != nil {
+				return err
+			}
+		}
+
+		if addReview {
+			if err = writePendingChanges(cl[:len(commits)]); err != nil {
+				return err
+			}
+
+			// Update #review with the number of Swarm review
+			if err = updateReviewHashtag(); err != nil {
+				return err
 			}
 		}
 
@@ -60,7 +69,7 @@ var shelveCmd = &cobra.Command{
 	},
 }
 
-func addReviewHashtag() error {
+func updateReviewHashtag() error {
 	_, err := trim(readConfig("reviewers", "Reviewers", false, false))
 	if err != nil {
 		return err

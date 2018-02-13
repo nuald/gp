@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -26,7 +27,7 @@ var clearCredentials bool
 var rootCmd = &cobra.Command{
 	Use:     "gp",
 	Short:   "Git/p4 helper",
-	Version: "0.0.5",
+	Version: "0.0.6",
 }
 
 // Execute other subcommands
@@ -335,6 +336,15 @@ func getAllWorkspaces(username string) ([]string, error) {
 	return workspaces, nil
 }
 
+func getWorkpath(dir string) (string, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return "", errors.Wrap(err, 1)
+	}
+
+	return path.Join(usr.HomeDir, ".gp", dir), nil
+}
+
 func createWorkspace() (string, error) {
 	username, err := getUsername()
 	if err != nil {
@@ -364,12 +374,11 @@ func createWorkspace() (string, error) {
 		}
 	}
 
-	usr, err := user.Current()
+	root, err := getWorkpath(workspace)
 	if err != nil {
-		return "", errors.Wrap(err, 1)
+		return "", err
 	}
 
-	root := path.Join(usr.HomeDir, ".gp", workspace)
 	mapping := fmt.Sprintf("\t%s... //%s/%s...",
 		depotPath, workspace, depotPath[2:])
 	def := fmt.Sprintf(`
@@ -403,9 +412,82 @@ func prepareSubmit() (string, error) {
 	args := []string{"config", "--replace-all",
 		"git-p4.skipSubmitEdit", "true"}
 	/* #nosec */
-	if err := exec.Command("git", args...).Run(); err != nil {
+	if err = exec.Command("git", args...).Run(); err != nil {
+		return "", errors.Wrap(err, 1)
+	}
+
+	args = []string{"config", "--replace-all",
+		"notes.rewriteRef", "refs/notes/commits"}
+	/* #nosec */
+	if err = exec.Command("git", args...).Run(); err != nil {
 		return "", errors.Wrap(err, 1)
 	}
 
 	return workspace, nil
+}
+
+func addNote(cl string, sha string) error {
+	note := fmt.Sprintf(`-mp4:%s`, cl)
+	args := []string{"notes", "add", "-f", note}
+	if sha != "" {
+		args = append(args, sha)
+	}
+
+	gitCmd := newCmd("git", args...)
+	if err := gitCmd.Run(); err != nil {
+		return errors.Wrap(err, 1)
+	}
+	return nil
+}
+
+func writePendingChanges(cl []string) error {
+	root, err := getWorkpath("p4-changes")
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(root)
+	if err != nil {
+		return errors.Wrap(err, 1)
+	}
+	defer func() {
+		if err = file.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	w := bufio.NewWriter(file)
+	for _, line := range cl {
+		if _, err = fmt.Fprintln(w, line); err != nil {
+			return errors.Wrap(err, 1)
+		}
+	}
+	if err = w.Flush(); err != nil {
+		return errors.Wrap(err, 1)
+	}
+	return nil
+}
+
+func readPendingChanges() ([]string, error) {
+	root, err := getWorkpath("p4-changes")
+	if err != nil {
+		return nil, err
+	}
+
+	file, err := os.Open(root)
+	if err != nil {
+		return nil, errors.Wrap(err, 1)
+	}
+	defer func() {
+		if err = file.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	return lines, scanner.Err()
 }
