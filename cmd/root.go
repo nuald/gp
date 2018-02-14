@@ -379,6 +379,13 @@ func createWorkspace() (string, error) {
 		return "", err
 	}
 
+	stream := depotPath[:len(depotPath)-1]
+	var optStream string
+	/* #nosec */
+	if err = exec.Command("p4", "streams", stream).Run(); err == nil {
+		optStream = fmt.Sprintf("Stream: %s", stream)
+	}
+
 	mapping := fmt.Sprintf("\t%s... //%s/%s...",
 		depotPath, workspace, depotPath[2:])
 	def := fmt.Sprintf(`
@@ -386,9 +393,11 @@ Client: %s
 Owner: %s
 Root: %s
 Options: allwrite noclobber compress unlocked nomodtime rmdir
+%s
 View:
 %s
-`, workspace, username, root, mapping)
+`, workspace, username, root, optStream, mapping)
+	fmt.Println(def)
 
 	cmd := newCmd("p4", "client", "-i")
 	cmd.Stdin = strings.NewReader(def)
