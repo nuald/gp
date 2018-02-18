@@ -23,6 +23,7 @@ import (
 )
 
 var clearCredentials bool
+var reviewersGroup string
 
 var rootCmd = &cobra.Command{
 	Use:     "gp",
@@ -40,6 +41,8 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&clearCredentials, "clear-credentials",
 		"c", false, "clear saved credentials")
+	rootCmd.PersistentFlags().StringVarP(&reviewersGroup, "reviewers", "r",
+		"default", "reviewers group")
 }
 
 func encrypt(plaintext string, fullKey string) (string, error) {
@@ -190,10 +193,10 @@ func readConfig(key string, title string,
 	if isGlobal {
 		args = append(args, "--global")
 	}
-	getArgs := append(args, gitKey)
+	gitArgs := append(args, gitKey)
 
 	/* #nosec */
-	cmdOut, err := exec.Command("git", getArgs...).Output()
+	cmdOut, err := exec.Command("git", gitArgs...).Output()
 	if err != nil {
 		fmt.Printf("Enter %s: ", title)
 

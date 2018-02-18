@@ -14,7 +14,7 @@ var addReview bool
 func init() {
 	rootCmd.AddCommand(shelveCmd)
 	shelveCmd.PersistentFlags().BoolVarP(&addReview, "add-review",
-		"r", true, "add review comment")
+		"a", true, "add review comment")
 }
 
 var shelveCmd = &cobra.Command{
@@ -70,12 +70,13 @@ var shelveCmd = &cobra.Command{
 }
 
 func updateReviewHashtag() error {
-	_, err := trim(readConfig("reviewers", "Reviewers", false, false))
+	_, err := getReviewers(reviewersGroup)
 	if err != nil {
 		return err
 	}
 
-	args := []string{"rebase", "-x", "gp review", "p4/HEAD"}
+	reviewCmd := "gp review -r " + reviewersGroup
+	args := []string{"rebase", "-x", reviewCmd, "p4/HEAD"}
 	cmd := newCmd("git", args...)
 	if err := cmd.Run(); err != nil {
 		return errors.Wrap(err, 1)

@@ -15,6 +15,10 @@ func init() {
 	rootCmd.AddCommand(reviewCmd)
 }
 
+func getReviewers(group string) (string, error) {
+	return trim(readConfig("reviewers."+group, "Reviewers", false, false))
+}
+
 var reviewCmd = &cobra.Command{
 	Use:   "review",
 	Short: "Add #review hashtag and the list of reviewers into the HEAD commit",
@@ -32,7 +36,7 @@ var reviewCmd = &cobra.Command{
 			return replaceReview(comment)
 		}
 
-		reviewers, err := trim(readConfig("reviewers", "Reviewers", false, false))
+		reviewers, err := getReviewers(reviewersGroup)
 		if err != nil {
 			return err
 		}

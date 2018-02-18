@@ -13,7 +13,7 @@ to install those first.
 
 ## Usage
 
-The most common workflow is supported with `clone`, `rebase` and `submit` (`shelve`) commands:
+The most common workflow is supported with *clone*, *rebase* and *submit* (*shelve*) commands:
 
 ```
 Git/p4 helper
@@ -32,6 +32,7 @@ Available Commands:
 Flags:
   -c, --clear-credentials   clear saved credentials
   -h, --help                help for gp
+  -r, --reviewers string    reviewers group (default "default")
       --version             version for gp
 
 Use "gp [command] --help" for more information about a command.
@@ -79,6 +80,11 @@ To submit all changes that are in the current Git branch but not in the p4/maste
 To shelve all changes that are in the current Git branch, use:
 
     $ git p4 shelve
+
+By default, shelving adds/update review metadata (can be disabled with `--add-review=false`) using
+*default* reviewers group (can be specified with the "-r" flag):
+
+    $ git p4 shelve -r mobile
 
 ## Contribution
 
