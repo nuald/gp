@@ -109,7 +109,8 @@ func newCmd(name string, args ...string) *exec.Cmd {
 
 	/* #nosec */
 	cmd := exec.Command(name, args...)
-	cmd.Stderr = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
 	return cmd
 }
 

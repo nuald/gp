@@ -5,7 +5,7 @@ task setupCore(type: Exec) {
 	group BUILD_GROUP
 	description 'Installs the core packages.'
 
-	commandLine 'go', 'get', '-u',
+	commandLine 'go', 'get',
 		'github.com/alecthomas/gometalinter',
 		'github.com/spf13/cobra',
 		'golang.org/x/crypto/ssh/terminal',
